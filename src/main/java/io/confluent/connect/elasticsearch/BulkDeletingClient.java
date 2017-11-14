@@ -32,23 +32,25 @@ import io.searchbox.client.JestClient;
 import io.searchbox.core.Bulk;
 import io.searchbox.core.BulkResult;
 
-public class BulkIndexingClient implements BulkClient<IndexableRecord, Bulk> {
+public class BulkDeletingClient implements BulkClient<DeletableRecord, Bulk> {
 
-  private static final Logger LOG = LoggerFactory.getLogger(BulkIndexingClient.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BulkDeletingClient.class);
 
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   private final JestClient client;
 
-  public BulkIndexingClient(JestClient client) {
+  public BulkDeletingClient(JestClient client) {
     this.client = client;
   }
 
   @Override
-  public Bulk bulkRequest(List<IndexableRecord> batch) {
+  public Bulk bulkRequest(List<DeletableRecord> batch) {
     final Bulk.Builder builder = new Bulk.Builder();
-    for (IndexableRecord record : batch) {
-      builder.addAction(record.toIndexRequest());
+    for (DeletableRecord record : batch) {
+      builder.defaultIndex(record.key.index);
+      builder.defaultType(record.key.type);
+      builder.addAction(record.toDeleteRequest());
     }
     return builder.build();
   }

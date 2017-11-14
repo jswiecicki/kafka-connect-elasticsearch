@@ -16,28 +16,18 @@
 
 package io.confluent.connect.elasticsearch;
 
-import io.searchbox.core.Index;
+import io.searchbox.core.Delete;
 
-public class IndexableRecord {
+public class DeletableRecord {
 
   public final Key key;
-  public final String payload;
-  public final Long version;
 
-  public IndexableRecord(Key key, String payload, Long version) {
+  public DeletableRecord(Key key) {
     this.key = key;
-    this.version = version;
-    this.payload = payload;
   }
 
-  public Index toIndexRequest() {
-    Index.Builder req = new Index.Builder(payload)
-        .index(key.index)
-        .type(key.type)
-        .id(key.id);
-    if (version != null) {
-      req.setParameter("version_type", "external").setParameter("version", version);
-    }
+  public Delete toDeleteRequest() {
+    Delete.Builder req = new Delete.Builder(key.id);
     return req.build();
   }
 

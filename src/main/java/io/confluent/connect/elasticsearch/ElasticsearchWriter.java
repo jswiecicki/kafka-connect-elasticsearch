@@ -48,8 +48,7 @@ public class ElasticsearchWriter {
   private final Set<String> ignoreSchemaTopics;
   private final Map<String, String> topicToIndexMap;
   private final long flushTimeoutMs;
-  private final BulkProcessor<IndexableRecord, ?> bulkProcessor;
-  private final boolean dropInvalidMessage;
+  private final BulkProcessor<DeletableRecord, ?> bulkProcessor;
   private final DataConverter converter;
 
   private final Set<String> existingMappings;
@@ -69,8 +68,7 @@ public class ElasticsearchWriter {
       int batchSize,
       long lingerMs,
       int maxRetries,
-      long retryBackoffMs,
-      boolean dropInvalidMessage
+      long retryBackoffMs
   ) {
     this.client = client;
     this.type = type;
@@ -80,12 +78,11 @@ public class ElasticsearchWriter {
     this.ignoreSchemaTopics = ignoreSchemaTopics;
     this.topicToIndexMap = topicToIndexMap;
     this.flushTimeoutMs = flushTimeoutMs;
-    this.dropInvalidMessage = dropInvalidMessage;
     this.converter = new DataConverter(useCompactMapEntries);
 
     bulkProcessor = new BulkProcessor<>(
         new SystemTime(),
-        new BulkIndexingClient(client),
+        new BulkDeletingClient(client),
         maxBufferedRecords,
         maxInFlightRequests,
         batchSize,
@@ -113,7 +110,6 @@ public class ElasticsearchWriter {
     private long lingerMs;
     private int maxRetry;
     private long retryBackoffMs;
-    private boolean dropInvalidMessage;
 
     public Builder(JestClient client) {
       this.client = client;
@@ -181,11 +177,6 @@ public class ElasticsearchWriter {
       return this;
     }
 
-    public Builder setDropInvalidMessage(boolean dropInvalidMessage) {
-      this.dropInvalidMessage = dropInvalidMessage;
-      return this;
-    }
-
     public ElasticsearchWriter build() {
       return new ElasticsearchWriter(
           client,
@@ -202,8 +193,7 @@ public class ElasticsearchWriter {
           batchSize,
           lingerMs,
           maxRetry,
-          retryBackoffMs,
-          dropInvalidMessage
+          retryBackoffMs
       );
     }
   }
@@ -213,8 +203,7 @@ public class ElasticsearchWriter {
       final String indexOverride = topicToIndexMap.get(sinkRecord.topic());
       final String index = indexOverride != null ? indexOverride : sinkRecord.topic();
       final boolean ignoreKey = ignoreKeyTopics.contains(sinkRecord.topic()) || this.ignoreKey;
-      final boolean ignoreSchema =
-          ignoreSchemaTopics.contains(sinkRecord.topic()) || this.ignoreSchema;
+      final boolean ignoreSchema = ignoreSchemaTopics.contains(sinkRecord.topic()) || this.ignoreSchema;
 
       if (!ignoreSchema && !existingMappings.contains(index)) {
         try {
@@ -222,54 +211,17 @@ public class ElasticsearchWriter {
             Mapping.createMapping(client, index, type, sinkRecord.valueSchema());
           }
         } catch (IOException e) {
-          // FIXME: concurrent tasks could attempt to create the mapping and one of the requests may
-          // fail
+          // FIXME: concurrent tasks could attempt to create the mapping and one of the requests may fail
           throw new ConnectException("Failed to initialize mapping for index: " + index, e);
         }
         existingMappings.add(index);
       }
 
-      final IndexableRecord indexableRecord = tryGetIndexableRecord(
-              sinkRecord,
-              index,
-              ignoreKey,
-              ignoreSchema);
+      final DeletableRecord deletableRecord = converter.convertRecord(sinkRecord, index, type,
+                                                                      ignoreKey);
 
-      if (indexableRecord != null) {
-        bulkProcessor.add(indexableRecord, flushTimeoutMs);
-      }
-
+      bulkProcessor.add(deletableRecord, flushTimeoutMs);
     }
-  }
-
-  private IndexableRecord tryGetIndexableRecord(
-          SinkRecord sinkRecord,
-          String index,
-          boolean ignoreKey,
-          boolean ignoreSchema) {
-
-    IndexableRecord indexableRecord = null;
-
-    try {
-      indexableRecord = converter.convertRecord(
-              sinkRecord,
-              index,
-              type,
-              ignoreKey,
-              ignoreSchema);
-    } catch (ConnectException convertException) {
-      if (dropInvalidMessage) {
-        log.error("Can't convert record from topic {} with partition {} and offset {}."
-                   + " Error message: {}",
-                  sinkRecord.topic(),
-                  sinkRecord.kafkaPartition(),
-                  sinkRecord.kafkaOffset(),
-                  convertException.getMessage());
-      } else {
-        throw convertException;
-      }
-    }
-    return indexableRecord;
   }
 
   public void flush() {
