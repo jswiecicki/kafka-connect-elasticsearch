@@ -130,8 +130,7 @@ public class ElasticsearchSinkTask extends SinkTask {
           .setBatchSize(batchSize)
           .setLingerMs(lingerMs)
           .setRetryBackoffMs(retryBackoffMs)
-          .setMaxRetry(maxRetry)
-          .setDropInvalidMessage(dropInvalidMessage);
+          .setMaxRetry(maxRetry);
 
       writer = builder.build();
       writer.start();
