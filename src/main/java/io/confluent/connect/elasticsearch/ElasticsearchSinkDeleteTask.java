@@ -37,9 +37,9 @@ import io.searchbox.client.JestClient;
 import io.searchbox.client.JestClientFactory;
 import io.searchbox.client.config.HttpClientConfig;
 
-public class ElasticsearchSinkTask extends SinkTask {
+public class ElasticsearchSinkDeleteTask extends SinkTask {
 
-  private static final Logger log = LoggerFactory.getLogger(ElasticsearchSinkTask.class);
+  private static final Logger log = LoggerFactory.getLogger(ElasticsearchSinkDeleteTask.class);
   private ElasticsearchWriter writer;
   private JestClient client;
 
@@ -56,7 +56,7 @@ public class ElasticsearchSinkTask extends SinkTask {
   // public for testing
   public void start(Map<String, String> props, JestClient client) {
     try {
-      log.info("Starting ElasticsearchSinkTask.");
+      log.info("Starting ElasticsearchSinkDeleteTask.");
 
       ElasticsearchSinkConnectorConfig config = new ElasticsearchSinkConnectorConfig(props);
       String type = config.getString(ElasticsearchSinkConnectorConfig.TYPE_NAME_CONFIG);
@@ -136,7 +136,7 @@ public class ElasticsearchSinkTask extends SinkTask {
       writer.start();
     } catch (ConfigException e) {
       throw new ConnectException(
-          "Couldn't start ElasticsearchSinkTask due to configuration error:",
+          "Couldn't start ElasticsearchSinkDeleteTask due to configuration error:",
           e
       );
     }
@@ -171,7 +171,7 @@ public class ElasticsearchSinkTask extends SinkTask {
 
   @Override
   public void stop() throws ConnectException {
-    log.info("Stopping ElasticsearchSinkTask.");
+    log.info("Stopping ElasticsearchSinkDeleteTask.");
     if (writer != null) {
       writer.stop();
     }

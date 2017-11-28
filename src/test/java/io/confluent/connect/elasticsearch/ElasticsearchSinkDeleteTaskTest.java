@@ -33,7 +33,7 @@ import java.util.HashSet;
 import java.util.Map;
 
 @ThreadLeakScope(ThreadLeakScope.Scope.NONE)
-public class ElasticsearchSinkTaskTest extends ElasticsearchSinkTestBase {
+public class ElasticsearchSinkDeleteTaskTest extends ElasticsearchSinkTestBase {
 
   private Map<String, String> createProps() {
     Map<String, String> props = new HashMap<>();
@@ -49,7 +49,7 @@ public class ElasticsearchSinkTaskTest extends ElasticsearchSinkTestBase {
     cluster.ensureAtLeastNumDataNodes(3);
     Map<String, String> props = createProps();
 
-    ElasticsearchSinkTask task = new ElasticsearchSinkTask();
+    ElasticsearchSinkDeleteTask task = new ElasticsearchSinkDeleteTask();
     task.start(props, client);
     task.open(new HashSet<>(Arrays.asList(TOPIC_PARTITION, TOPIC_PARTITION2, TOPIC_PARTITION3)));
 

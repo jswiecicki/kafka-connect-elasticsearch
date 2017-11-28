@@ -85,7 +85,7 @@ Then start the Elasticsearch connector by loading its configuration with the fol
    {
      "name": "elasticsearch-sink",
      "config": {
-       "connector.class": "io.confluent.connect.elasticsearch.ElasticsearchSinkConnector",
+       "connector.class": "io.confluent.connect.elasticsearch.ElasticsearchSinkDeleteConnector",
        "tasks.max": "1",
        "topics": "test-elasticsearch-sink",
        "key.ignore": "true",
